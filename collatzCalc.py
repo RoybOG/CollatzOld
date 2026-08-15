@@ -65,6 +65,9 @@ def generate_collatz(itr):
     for n in itr:
         addNumberToCollatzGraph(G,n)
 
+
+    
+
     return G
 
 def generate_mermaid_link(graph_code):
@@ -128,6 +131,7 @@ flowchart TD
 classDef red stroke:red,stroke-width: 3px;
 classDef green stroke:green,stroke-width: 3px;
 classDef blue stroke:blue,stroke-width: 3px;
+classDef gold stroke:gold,stroke-width: 3px;
 """
     mermaid_code =mermaid_code + f'\n{getNodeID(1)+getNodeDetails(1)}'
 
@@ -180,12 +184,37 @@ def main():
         prompt = input("Enter number/s: \n")
         user_numbers = interpret_input(prompt)
         G = generate_collatz(user_numbers)
+
+        os.makedirs('./collatz_graph', exist_ok=True)
+    
+        file_path = f'./collatz_graph/{prompt}.txt'
+        with open(file_path, "w") as f:
+            json.dump(nx.node_link_data(G),f)
         generate_mermaid_code(G,prompt,{"MapFromOne": lambda n, g: g.nodes[n].get("MapFromOne","")},lambda n,g: 'green' if n%2 else '')
     except SyntaxError:
         main()
 
 
+def check_multiples_for_3():
+  
+  l = 100
+  G = generate_collatz(sorted(set(range(3,l,6))))#^{27,63}))
+  os.makedirs('./collatz_graph', exist_ok=True)
+    
+  file_path = f'./collatz_graph/3_Multiples_up_to_{l}.txt'
+  with open(file_path, "w") as f:
+      f.write(json.dumps(nx.node_link_data(G)))
+  generate_mermaid_code(G,f"3_Multiples_up_to_{l}",{"MapFromOne": lambda n, g: g.nodes[n].get("MapFromOne",""), "mod3":lambda n, g: n%3} ,lambda n,g: '' if n%2==0 else (('gold','green','red')[n%3]))
 
+  #check_multiples_for_3()
+  
+  with open('./collatz_graph/1-50.txt') as f:
+      H = nx.node_link_graph(json.load(f))
+      print(set(H.nodes).difference(set(G.nodes)))
 if __name__ == "__main__":
+  check_multiples_for_3()
+  
+  """
   while True:
     main()
+  """
