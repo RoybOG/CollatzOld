@@ -8,6 +8,7 @@ from networkx.readwrite import json_graph
 from dataclasses import dataclass
 import re 
 import itertools
+from collections import deque
 
 @dataclass
 class RegexEqual(str):
@@ -59,6 +60,39 @@ def addNumberToCollatzGraph(G, n):
 # Example usage
 
 
+def generate_reverse_collatz(rootNum, depth = 10):
+    G = nx.DiGraph()
+    G.add_node(rootNum)
+    
+    current_list = [rootNum]
+    new_list = []
+    def addNextLevel(n , nNew):
+                G.add_edge(n, nNew)
+                if nNew%3 != 0: # multiples of 3 are leaves
+                    new_list.append(nNew)
+                else:
+                    pass
+            #print(list(leaves))
+    
+    for i in range(depth):    
+        new_list = []
+        for n in current_list:
+            
+            addNextLevel(n, 2 * n)
+            if n % 6 == 4:
+                addNextLevel(n, (n-1) // 3)    
+
+       # del current_list
+        current_list = new_list
+        
+        #del new_list
+
+    print(f'Number of paths: {len(new_list)}')
+
+    return G.reverse()
+
+
+
 def generate_collatz(itr):
     G = nx.DiGraph()
 
@@ -87,15 +121,18 @@ def generate_mermaid_link(graph_code):
 
 
 
-def generate_mermaid_code(g,fileName,sideInfos=None, determineColor=None):
+def generate_mermaid_code(g,fileName,sideInfos=None, determineColor=None, formatTitle=None):
     
     fileName = fileName + f'({", ".join(sideInfos.keys()) if isinstance(sideInfos, dict) else ""})'
     getNodeID = lambda nodeNum: f'n{str(nodeNum)}'
 
 
     def getNodeDetails(n):
-        
-        s = f'["`**{n}**'
+        s = '["`'
+        if formatTitle:
+            s = s + f'**{formatTitle(n)}**'
+        else:
+            s = s + f'**{n}**'
         
         if sideInfos:
             s = s + '\n'
@@ -129,18 +166,24 @@ classDef red stroke:red,stroke-width: 3px;
 classDef green stroke:green,stroke-width: 3px;
 classDef blue stroke:blue,stroke-width: 3px;
 """
-    mermaid_code =mermaid_code + f'\n{getNodeID(1)+getNodeDetails(1)}'
+    #for leaf_out_node in (node for node in g if g.in_degree(node) == 1 and g.out_degree(node) == 0):
+
+     #   mermaid_code =mermaid_code + f'\n{getNodeID(leaf_out_node)+getNodeDetails(leaf_out_node)}'
 
 
     for node in g: 
-        print(f'{node}->{list(g.neighbors(node))}')
-        for niehgbour in g.neighbors(node):
-            mermaid_code += f'\n{getNodeText(node)}-->{getNodeText(niehgbour)}'
+        #print(f'{node}->{list(g.neighbors(node))}')
+        if g.in_degree(node) == 1 and g.out_degree(node) == 0:
+            mermaid_code += f'\n{getNodeText(node)}'
+        else:
+            for niehgbour in g.neighbors(node):
+            
+                mermaid_code += f'\n{getNodeText(node)}-->{getNodeText(niehgbour)}'
 
     os.makedirs('./mermaid_graphs', exist_ok=True)
     
-    with open('./graphLinks.md', "a") as f:
-      f.write(f"[{fileName}]({generate_mermaid_link(mermaid_code)})") 
+    """with open('./graphLinks.md', "a") as f:
+      f.write(f"[{fileName}]({generate_mermaid_link(mermaid_code)})") """
     
     with open(f'./mermaid_graphs/{fileName}.mmd', "w") as f:
         f.write(mermaid_code)
@@ -170,14 +213,27 @@ def interpret_input(s):
     
 
 
+def getReversed(rootNum, depth=10):
+    revG = generate_reverse_collatz(rootNum, depth)
+    #for node in sorted(revG.nodes):
+        #print(node)
+            
+            #user_numbers = interpret_input(prompt)
+    generate_mermaid_code(revG,f"rev{rootNum}(depth={depth})",
+                          determineColor= lambda n,g: 'red' if n%3==0 else ''
+                        #  ,formatTitle= lambda n: format(n,'b')
+                          )
+                                  #{"MapFromOne": lambda n, g: g.nodes[n].get("MapFromOne","")},lambda n,g: 'green' if n%2 else '')
 
 def main(): 
     try:
-        
         prompt = input("Enter number/s: \n")
-        user_numbers = interpret_input(prompt)
-        G = generate_collatz(user_numbers)
-        generate_mermaid_code(G,prompt,{"MapFromOne": lambda n, g: g.nodes[n].get("MapFromOne","")},lambda n,g: 'green' if n%2 else '')
+        #rootNum = int(prompt)
+        getReversed(int(prompt),15)
+        
+        #user_numbers = interpret_input(prompt)
+        #generate_mermaid_code(revG,f"rev{rootNum}(binmap)")#formatTitle= lambda n: format(n,'b'))
+                              #{"MapFromOne": lambda n, g: g.nodes[n].get("MapFromOne","")},lambda n,g: 'green' if n%2 else '')
     except SyntaxError:
         main()
 
