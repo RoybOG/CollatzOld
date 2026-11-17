@@ -5,6 +5,22 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.collections import LineCollection
 import matplotlib.pyplot as plt
 
+class FullGraphToolbar(NavigationToolbar2Tk):
+  def __init__(self, canvas, window, full_xlim):
+    self.full_xlim = full_xlim
+    super().__init__(canvas, window)
+
+  def save_figure(self, *args):
+    ax = self.canvas.figure.axes[0]
+    visible_xlim = ax.get_xlim()
+    try:
+      ax.set_xlim(self.full_xlim)
+      super().save_figure(*args)
+    finally:
+      ax.set_xlim(visible_xlim)
+      self.canvas.draw_idle()
+
+
 def countTrailingZeros(n):
     return (n & -n).bit_length() - 1 #Try to remove the -1, costly than a logic gate
 
@@ -26,14 +42,12 @@ def collatz_gen(n):
 
 
 def get_starting_number():
-  """Prompts the user for a positive integer via the console."""
-  while True:
-    raw = input('Enter a starting positive integer (default 27): ').strip()
-    if not raw:
-      return 27
-    if raw.isdigit() and int(raw) > 0:
-      return int(raw)
-    print('Please enter a valid integer greater than 0.')
+   raw = input('Enter a starting positive integer (default 27): ').strip()
+   if not raw:
+    return 27
+   else:
+     return int(raw,0)
+    #print('Please enter a valid integer greater than 0.')
 
 
 def build_trajectory(start_n, colorsFunc=None):
@@ -128,7 +142,7 @@ def show_interactive_window(fig, ax, total_steps, title='Collatz Trajectory'):
 
   toolbar_frame = ttk.Frame(root)
   toolbar_frame.pack(side=tk.BOTTOM, fill=tk.X)
-  NavigationToolbar2Tk(mpl_canvas, toolbar_frame)
+  FullGraphToolbar(mpl_canvas, toolbar_frame, (min_x, max_x))
 
   def sync_scrollbar_thumb(*_):
     """Updates the scrollbar handle size and position to match ax.get_xlim()."""
@@ -214,7 +228,7 @@ def plot_collatz(start_n, colorsFunc = None, textFunc=None):
   # Start zoomed into the first 30 steps so the scrollbar is immediately active
   initial_right = min(total_steps + 0.8, 30.0)
   ax.set_xlim(-0.8, initial_right)
-  ax.set_ylim(0.8, max(ys) * 1.8)
+  ax.set_ylim(1, max(ys) * 1.8)
 
   ax.set_title(
       f'Collatz Path of {start_n:,} ({total_steps} Steps, Peak: {max(ys):,})  —  '
