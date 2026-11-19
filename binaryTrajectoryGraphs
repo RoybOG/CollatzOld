@@ -197,6 +197,7 @@ def show_interactive_window(fig, ax, total_steps, title='Collatz Trajectory'):
         new_left = max(min_x, max_x - new_width)
 
       ax.set_xlim(new_left, new_right)
+      ax.set_ylim(bottom=1)
 
     sync_scrollbar_thumb()
     fig.canvas.draw_idle()
