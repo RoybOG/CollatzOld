@@ -4,6 +4,7 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.collections import LineCollection
 import matplotlib.pyplot as plt
+from collatzAnalysisBin import collatzBinDerivative2
 
 class FullGraphToolbar(NavigationToolbar2Tk):
   def __init__(self, canvas, window, full_xlim):
@@ -120,7 +121,7 @@ def attach_hover_tooltip(fig, ax, scatter, points, textFunc=None):
   fig.canvas.mpl_connect('motion_notify_event', on_hover)
 
 
-def show_interactive_window(fig, ax, total_steps, title='Collatz Trajectory'):
+def show_interactive_window(fig, ax, total_steps, binary_values, title='Collatz Trajectory'):
   """Displays a fixed-size chart with synced horizontal scrollbar and mouse-wheel zoom."""
   root = tk.Tk()
   root.title(title)
@@ -135,6 +136,31 @@ def show_interactive_window(fig, ax, total_steps, title='Collatz Trajectory'):
   mpl_canvas = FigureCanvasTkAgg(fig, master=root)
   mpl_canvas.get_default_filename = lambda: title
   mpl_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+  binary_frame = ttk.Frame(root)
+  binary_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+  ttk.Label(binary_frame, text='Binary trajectory').pack(side=tk.TOP, fill=tk.X)
+
+  binary_scroll = ttk.Scrollbar(binary_frame, orient=tk.VERTICAL)
+  binary_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+  binary_text = tk.Text(
+      binary_frame,
+      height=5,
+      font=('Consolas', 10),
+      yscrollcommand=binary_scroll.set,
+      padx=8,
+      relief=tk.FLAT,
+      background='#f8fafc',
+      foreground='#0f172a',
+  )
+  binary_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+  binary_text.tag_configure('right', justify='right')
+  binary_text.insert(tk.END, '\n'.join(format(value, 'b') for value in binary_values), 'right')
+  #binary_text.insert(tk.END, '\n'.join(str(value) for value in binary_values), 'right') #for list of numbers instead of binarys
+  binary_text.configure(state=tk.DISABLED)
+  binary_scroll.config(command=binary_text.yview)
 
   # Native Tkinter scrollbar wired directly to the plot's X-axis data window
   h_scroll = ttk.Scrollbar(root, orient=tk.HORIZONTAL)
@@ -180,12 +206,8 @@ def show_interactive_window(fig, ax, total_steps, title='Collatz Trajectory'):
     cur_width = cur_right - cur_left
 
     # Shift + Scroll pans the data horizontally
+    
     if event.key and 'shift' in event.key:
-      direction = -1 if event.button == 'up' else 1
-      new_left = cur_left + direction * (cur_width * 0.15)
-      new_left = max(min_x, min(max_x - cur_width, new_left))
-      ax.set_xlim(new_left, new_left + cur_width)
-    else:
       # Normal Scroll zooms in/out centered on the cursor's X position
       zoom_factor = 0.8 if event.button == 'up' else 1.25
       new_width = max(3.0, min(total_span, cur_width * zoom_factor))
@@ -198,6 +220,11 @@ def show_interactive_window(fig, ax, total_steps, title='Collatz Trajectory'):
 
       ax.set_xlim(new_left, new_right)
       ax.set_ylim(bottom=1)
+    else:
+      direction = -1 if event.button == 'up' else 1
+      new_left = cur_left + direction * (cur_width * 0.15)
+      new_left = max(min_x, min(max_x - cur_width, new_left))
+      ax.set_xlim(new_left, new_left + cur_width)
 
     sync_scrollbar_thumb()
     fig.canvas.draw_idle()
@@ -217,6 +244,9 @@ def plot_collatz(start_n, colorsFunc = None, textFunc=None):
   points, segments, colors, widths = build_trajectory(start_n,colorsFunc)
   xs, ys = zip(*points)
   print(f'max number is {max(ys)}')
+
+  #for yValue in ys:
+  #    print(format(yValue,'b'))
   total_steps = len(points) - 1
 
   # Fixed responsive figure size so axes stay pinned while data scrolls inside
@@ -244,7 +274,15 @@ def plot_collatz(start_n, colorsFunc = None, textFunc=None):
 
   fig.tight_layout()
   attach_hover_tooltip(fig, ax, scatter, points,textFunc)
-  show_interactive_window(fig, ax, total_steps, title=f'Collatz Path of {start_n:,}')
+  show_interactive_window(
+      fig,
+      ax,
+      total_steps,
+      ys,
+      title=f'Collatz Path of {start_n:,}',
+  )
+
+  
 
 allColors = ('green','blue')
 def getlineColor(p1,p2):
@@ -256,5 +294,5 @@ if __name__ == '__main__':
     starting_number = get_starting_number()
 
     getText = lambda x,y: {'bin':format(y,'b')}
-  
+    #collatzBinDerivative2(starting_number)
     plot_collatz(starting_number,textFunc=getText, colorsFunc=getlineColor)
